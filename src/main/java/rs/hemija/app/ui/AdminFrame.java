@@ -8,6 +8,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 public class AdminFrame extends JFrame{
 
@@ -190,8 +191,8 @@ public class AdminFrame extends JFrame{
         try {
             int idLab = Integer.parseInt(input.trim());
 
-            try (java.sql.Connection conn = rs.hemija.app.db.Db.getConnection()) {
-                conn.setAutoCommit(false);
+            try (Connection connection = Db.getConnection()) {
+                connection.setAutoCommit(false);
 
                 String checkSql = """
                     SELECT COUNT(*)
@@ -199,12 +200,12 @@ public class AdminFrame extends JFrame{
                     WHERE id_lab = ?
                     """;
 
-                try (java.sql.PreparedStatement ps = conn.prepareStatement(checkSql)) {
+                try (java.sql.PreparedStatement ps = connection.prepareStatement(checkSql)) {
                     ps.setInt(1, idLab);
 
-                    try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    try (ResultSet rs = ps.executeQuery()) {
                         if (rs.next() && rs.getInt(1) > 0) {
-                            conn.rollback();
+                            connection.rollback();
                             JOptionPane.showMessageDialog(this,
                                     "Laboratorija ne moze biti obrisana " +
                                             "jer postoje izvodjenja u toj laboratoriji.");
@@ -213,29 +214,29 @@ public class AdminFrame extends JFrame{
                     }
                 }
 
-                try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                try (PreparedStatement ps = connection.prepareStatement(
                         "DELETE FROM lab_resurs WHERE id_lab = ?")) {
                     ps.setInt(1, idLab);
                     ps.executeUpdate();
                 }
 
-                try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                try (PreparedStatement ps = connection.prepareStatement(
                         "DELETE FROM alat WHERE id_lab = ?")) {
                     ps.setInt(1, idLab);
                     ps.executeUpdate();
                 }
 
-                try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                try (PreparedStatement ps = connection.prepareStatement(
                         "DELETE FROM laboratorija WHERE id_lab = ?")) {
                     ps.setInt(1, idLab);
 
                     int rows = ps.executeUpdate();
 
                     if (rows > 0) {
-                        conn.commit();
+                        connection.commit();
                         JOptionPane.showMessageDialog(this, "Laboratorija je uspesno obrisana.");
                     } else {
-                        conn.rollback();
+                        connection.rollback();
                         JOptionPane.showMessageDialog(this, "Laboratorija nije pronadjena.");
                     }
                 }
