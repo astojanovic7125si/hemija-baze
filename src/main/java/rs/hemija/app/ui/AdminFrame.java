@@ -1,10 +1,13 @@
 package rs.hemija.app.ui;
 
+import rs.hemija.app.db.Db;
 import rs.hemija.app.model.User;
 import rs.hemija.app.util.TableHelper;
 
 import javax.swing.*;
 import java.awt.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 
 public class AdminFrame extends JFrame{
 
@@ -25,13 +28,17 @@ public class AdminFrame extends JFrame{
     private void initGUI(){
 
         JPanel panel = new JPanel();
-        panel.setLayout(new GridLayout(4,1,10,10));
+        panel.setLayout(new GridLayout(6,1,10,10));
 
         JButton laboratorijeButton = new JButton("Pregled laboratorija");
 
         JButton eksperimentiButton = new JButton("Pregled eksperimenata");
 
         JButton sesijeButton = new JButton("Pregled sesija");
+
+        JButton updateSessionButton = new JButton("Izmeni sesiju");
+
+        JButton deleteLabButton = new JButton("Obrisi laboratoriju");
 
         JButton logoutButton = new JButton("Odjavi se");
 
@@ -40,6 +47,8 @@ public class AdminFrame extends JFrame{
         panel.add(laboratorijeButton);
         panel.add(eksperimentiButton);
         panel.add(sesijeButton);
+        panel.add(updateSessionButton);
+        panel.add(deleteLabButton);
         panel.add(logoutButton);
 
         add(panel);
@@ -49,6 +58,10 @@ public class AdminFrame extends JFrame{
         eksperimentiButton.addActionListener(e -> showEksperimenti());
 
         sesijeButton.addActionListener(e -> showSesije());
+
+        updateSessionButton.addActionListener(e -> updateSession());
+
+        deleteLabButton.addActionListener(e -> deleteLab());
 
         logoutButton.addActionListener(e -> logout());
 
@@ -108,5 +121,130 @@ public class AdminFrame extends JFrame{
     private void logout(){
         dispose();
         new LoginFrame().setVisible(true);
+    }
+
+    private void updateSession(){
+
+        JTextField idField = new JTextField();
+        JTextField dateField = new JTextField();
+        JTextField startField = new JTextField();
+        JTextField endField = new JTextField();
+
+        Object[] fields = {
+                "ID sesije:", idField,
+                "Novi datum (YYYY-MM-DD):", dateField,
+                "Novo vreme pocetka (HH:MM:SS):", startField,
+                "Novo vreme zavrsetka (HH:MM:SS):", endField
+        };
+
+        int option = JOptionPane.showConfirmDialog(
+                this, fields, "Izmena sesije", JOptionPane.OK_CANCEL_OPTION);
+
+        if(option != JOptionPane.OK_OPTION){
+            return;
+        }
+
+        try{
+
+            int id = Integer.parseInt(idField.getText().trim());
+
+            String sql = """
+                    UPDATE sesija
+                    SET datum = ?,
+                        vreme_pocetka = ?,
+                        vreme_zavrsetka = ?
+                    WHERE id_sesija = ?
+                    """;
+
+            try (Connection connection = Db.getConnection();
+                 PreparedStatement ps = connection.prepareStatement(sql)){
+
+                ps.setString(1, dateField.getText().trim());
+                ps.setString(2, startField.getText().trim());
+                ps.setString(3, endField.getText().trim());
+                ps.setInt(4, id);
+
+                int rows = ps.executeUpdate();
+
+                if(rows > 0){
+                    JOptionPane.showMessageDialog(this, "Sesija je uspesno izmenjena!");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Nema sesije sa unetim ID-jem!");
+                }
+            }
+
+        } catch (Exception e){
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Greska pri izmeni sesije!");
+        }
+
+    }
+
+    private void deleteLab() {
+        String input = JOptionPane.showInputDialog(this, "Unesite ID laboratorije:");
+
+        if (input == null || input.trim().isEmpty()) {
+            return;
+        }
+
+        try {
+            int idLab = Integer.parseInt(input.trim());
+
+            try (java.sql.Connection conn = rs.hemija.app.db.Db.getConnection()) {
+                conn.setAutoCommit(false);
+
+                String checkSql = """
+                    SELECT COUNT(*)
+                    FROM izvodjenje
+                    WHERE id_lab = ?
+                    """;
+
+                try (java.sql.PreparedStatement ps = conn.prepareStatement(checkSql)) {
+                    ps.setInt(1, idLab);
+
+                    try (java.sql.ResultSet rs = ps.executeQuery()) {
+                        if (rs.next() && rs.getInt(1) > 0) {
+                            conn.rollback();
+                            JOptionPane.showMessageDialog(this,
+                                    "Laboratorija ne moze biti obrisana " +
+                                            "jer postoje izvodjenja u toj laboratoriji.");
+                            return;
+                        }
+                    }
+                }
+
+                try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                        "DELETE FROM lab_resurs WHERE id_lab = ?")) {
+                    ps.setInt(1, idLab);
+                    ps.executeUpdate();
+                }
+
+                try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                        "DELETE FROM alat WHERE id_lab = ?")) {
+                    ps.setInt(1, idLab);
+                    ps.executeUpdate();
+                }
+
+                try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                        "DELETE FROM laboratorija WHERE id_lab = ?")) {
+                    ps.setInt(1, idLab);
+
+                    int rows = ps.executeUpdate();
+
+                    if (rows > 0) {
+                        conn.commit();
+                        JOptionPane.showMessageDialog(this, "Laboratorija je uspesno obrisana.");
+                    } else {
+                        conn.rollback();
+                        JOptionPane.showMessageDialog(this, "Laboratorija nije pronadjena.");
+                    }
+                }
+
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Greska pri brisanju laboratorije.");
+        }
     }
 }
