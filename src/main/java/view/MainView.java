@@ -13,6 +13,7 @@ public class MainView extends Stage {
     private final Button btPromenaStatusa = new Button("Promena statusa izvođenja");
     private final Button btBrisanjeSesije = new Button("Brisanje sesije");
     private final Button btSamostalniUpit1 = new Button("Samostalni upit 1");
+    private final Button btSamostalniUpit2 = new Button("Samostalni upit 2");
     private final Button btOdjava = new Button("Odjavi se");
 
     public MainView() {
@@ -20,6 +21,7 @@ public class MainView extends Stage {
         btPromenaStatusa.setOnAction(e -> new PromenaStatusaView().show());
         btBrisanjeSesije.setOnAction(e -> new BrisanjeSesijeView().show());
         btSamostalniUpit1.setOnAction(e -> new SamostalniUpit1View().show());
+        btSamostalniUpit2.setOnAction(e -> new SamostalniUpit2View().show());
 
         btOdjava.setOnAction(e -> {
             this.close();
@@ -30,6 +32,7 @@ public class MainView extends Stage {
         btPromenaStatusa.setMaxWidth(Double.MAX_VALUE);
         btBrisanjeSesije.setMaxWidth(Double.MAX_VALUE);
         btSamostalniUpit1.setMaxWidth(Double.MAX_VALUE);
+        btSamostalniUpit2.setMaxWidth(Double.MAX_VALUE);
         btOdjava.setMaxWidth(Double.MAX_VALUE);
 
         VBox vbox = new VBox(
@@ -38,6 +41,7 @@ public class MainView extends Stage {
                 btPromenaStatusa,
                 btBrisanjeSesije,
                 btSamostalniUpit1,
+                btSamostalniUpit2,
                 btOdjava
         );
 
